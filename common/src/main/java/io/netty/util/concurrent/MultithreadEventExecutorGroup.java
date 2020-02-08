@@ -76,17 +76,21 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
             executor = new ThreadPerTaskExecutor(newDefaultThreadFactory());
         }
 
+        // 创建指定线程数的执行器数组, EventExecutor 就是 EventLoop 的父类
         children = new EventExecutor[nThreads];
 
+        // 初始化每个 EventExecutor
         for (int i = 0; i < nThreads; i ++) {
             boolean success = false;
             try {
+                // new NioEventLoop
                 children[i] = newChild(executor, args);
                 success = true;
             } catch (Exception e) {
                 // TODO: Think about if this is a good exception type
                 throw new IllegalStateException("failed to create a child event loop", e);
             } finally {
+                // 创建失败，就优雅关闭前面所有的 EventExecutor
                 if (!success) {
                     for (int j = 0; j < i; j ++) {
                         children[j].shutdownGracefully();
@@ -119,12 +123,13 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
             }
         };
 
+        // 为每个单例线程池添加一个关闭监听器
         for (EventExecutor e: children) {
             e.terminationFuture().addListener(terminationListener);
         }
 
         Set<EventExecutor> childrenSet = new LinkedHashSet<EventExecutor>(children.length);
-        Collections.addAll(childrenSet, children);
+        Collections.addAll(childrenSet, children); // 用 LinkedHashSet 管理所有 EventExecutor
         readonlyChildren = Collections.unmodifiableSet(childrenSet);
     }
 
